@@ -1,0 +1,63 @@
+#基础镜像
+FROM docker.io/centos:7
+
+#基础环境安装和配置
+RUN yum -y install java-1.8.0-openjdk.x86_64 \
+    &&yum -y install curl \
+    &&yum clean all \
+    &&cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+    &&echo 'Asia/Shanghai' >/etc/timezone
+
+#参数
+ARG userName
+ARG userGroup
+ARG appName
+ARG exposePort
+ARG jarName
+ARG runEnvProfile
+ARG version
+ARG appCheckUrl
+ARG javaOptions
+
+#作者
+MAINTAINER helper2018 979171608@qq.com
+#指定标签
+LABEL version=${version}
+
+#容器用户设置
+RUN useradd ${userName} -u ${userGroup} -s /bin/bash
+
+#暴露端口
+EXPOSE ${exposePort}
+
+#指定环境变量和指定字符编码集
+ENV DK_APP_NAME=${appName} \
+    DK_JAR_NAME=${jarName} \
+    DK_RUN_ENV_PROFILE=${runEnvProfile} \
+    DK_APP_CHECK_URL=${appCheckUrl} \
+    DK_JAVA_OPTIONS=${javaOptions} \
+    LANG=C.UTF-8 \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US:en \
+    LC_ALL=en_US.UTF-8
+
+#挂载目录
+VOLUME ["/data/project/${DK_APP_NAME}"]
+
+#复制脚本
+COPY docker_entrypoint.sh /
+
+#文件和目录权限设置
+RUN chmod +x docker_entrypoint.sh \
+    &&chown -R ${userName}:${userGroup} docker_entrypoint.sh
+
+USER ${userName}
+
+#健康检查
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 CMD /usr/bin/curl -L -o /dev/null --connect-timeout 5 -s -w %{http_code}  ${DK_APP_CHECK_URL}
+
+#执行命令
+ENTRYPOINT ["./docker_entrypoint.sh"]
+
+#当容器退出时给系统发送什么样的指令-15
+STOPSIGNAL SIGTERM
