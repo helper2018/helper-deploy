@@ -22,14 +22,17 @@ weight=$3
 for (( i = 0; i < ${#app_names[@]}; i++ )); do
   if [ "x${app_names[i]}" == "x${app_name}" ]; then
     app_ports=(${app_expose_ports[i]})
-    app_port=${app_check_ports[0]}
+    app_port=${app_ports[0]}
     break
   fi
 done
 
-server_port=$3
+# http协议代理
 conf_path="/data/tools/nginx/conf/conf.d/${app_name}.conf"
+# TCP、UDP代理
+# conf_path="/data/tools/nginx/conf/stream.d/${app_name}.conf"
 # 修改服务权重
-sed -i.bak 's/server '${server_ip}':'${app_port}'.*/server '${server_ip}':'${app_port}' weight='${weight}';/g' ${conf_path}
+sed -i.bak 's/server '${server_ip}':'${app_port}'.*/server '${server_ip}':'${app_port}' weight='${weight}' max_fails=3 fail_timeout=10s;/g' ${conf_path}
 # 重启nginx服务
-/data/tools/nginx/sbin/nginx -s reload
+echo "请输入app用户密码重启nginx:"
+sudo /data/tools/nginx/sbin/nginx -s reload

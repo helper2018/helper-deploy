@@ -10,8 +10,6 @@ ONLINE_WAIT_TIME=70
 today=`date +"%Y_%m_%d_%H%M%S"`
 # 构建项目
 
-# 全部项目名
-all_project=(healthDataCenter healthcloud)
 # 项目目录
 project_dir=""
 # 项目构建结果
@@ -127,7 +125,7 @@ offline_docker_container(){
   source ~/.bash_profile
 
   #从负载均衡摘除当前节点
-  if [ x"${elb_members_name}" != x"xo" ];then
+  if [ "x${elb_members_name}" != "x" ];then
     echo "从负载均衡摘除当前节点: ~/bin/deploy_project/update_elb_nginx.sh ${elb_members_name} ${server_ip} 0"
     ~/bin/deploy_project/update_elb_nginx.sh ${elb_members_name} ${server_ip} 0
   fi
@@ -182,7 +180,7 @@ online_docker_container(){
   fi
 
   #从负载均衡启用当前节点
-  if [ x"${elb_members_name}" != x"xo" ];then
+  if [ "x${elb_members_name}" != "x" ];then
     echo "从负载均衡启用当前节点: ~/bin/deploy_project/update_elb_nginx.sh ${elb_members_name} ${server_ip} ${weight}"
     ~/bin/deploy_project/update_elb_nginx.sh ${elb_members_name} ${server_ip} ${weight}
   fi

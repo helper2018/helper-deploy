@@ -30,7 +30,7 @@ spring boot 项目生产级、轻量级自动部署脚本及流程
 ./all_server.sh 应用名称
 ```
 
-### 6.应用状态监控(配置定时任务实现)
+### 6.应用状态监控(配置定时任务实现)(monitor/)
 * auto_build_project.sh 自动构建发布应用(开发、测试环境使用)
 * server_clear.sh 发布jar清理、docker容器日期清理
 * monitor_service.sh 服务监控并发送短信通知

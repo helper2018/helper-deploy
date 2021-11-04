@@ -84,9 +84,9 @@ vi /etc/ssh/sshd_config
 service sshd restart
 ```
 
-### 4.根据服务器的环境属性修改hostname方便管理，重新登录后生效(root)(可选)
+### 4.根据服务器的环境属性修改hostname方便管理，重新登录后生效(root)
 ```shell
-hostnamectl set-hostname dev1
+hostnamectl set-hostname prod1
 ```
 
 ### 5.检查系统文件资源限制(root)
@@ -108,7 +108,7 @@ root hard nofile 65535
 * hard nofile 65535
 ```
 
-### 6.配置ssh免密登录(app)(可选)
+### 6.配置ssh免密登录(app)
 ```shell
 # 在自己的电脑上执行，一直回车，不输入密码。参考 https://code.aliyun.com/help/ssh/README
 ssh-keygen -t rsa -C "xxx@qq.com"
@@ -129,7 +129,7 @@ vi ~/.ssh/authorized_keys
 chmod 600 ~/.ssh/authorized_keys
 
 # 测试免密登录
-ssh app@dev1
+ssh app@prod1
 ```
 
 ## 二. 项目构建环境搭建
@@ -189,6 +189,8 @@ mkdir conf.d
 # tcp、udp配置文件目录
 mkdir stream.d
 mkdir -p /data/tools/nginx/cache/client_temp
+# 大文件执行时需要用到，无权限时时会报错
+sudo chomod +777 /data/tools/nginx/cache
 
 # 启动nginx
 sudo /data/tools/nginx/sbin/nginx
@@ -203,19 +205,19 @@ sudo vi nginx.service
 > sudo cat nginx.service
 [Unit]
 Description=nginx service
-After=network.target 
-   
-[Service] 
-Type=forking 
+After=network.target
+
+[Service]
+Type=forking
 ExecStart=/data/tools/nginx/sbin/nginx
 ExecReload=/data/tools/nginx/sbin/nginx -s reload
 ExecStop=/data/tools/nginx/sbin/nginx -s quit
-PrivateTmp=true 
-   
+PrivateTmp=true
+
 [Install]
 
 # 设置开机启动
-systemctl enable nginx
+sudo systemctl enable nginx
 ```
 
 ### 7.增加maven、java、nginx环境变量(app)
@@ -233,22 +235,34 @@ export MAVEN_OPTS
 ### 1.mysql数据库迁移
 ```shell
 # 找一台安装有mysql服务端的服务器来执行备份mysql数据库
-mysqldump -d --host 数据库主机host --port 数据库端口 --user 数据库用户名 --password=数据库密码 数据库名称  > 数据库名称.sql
+mkdir mysql
+cd mysql
+mysqldump --host 127.0.0.1 --port 3306 --user XXX --password=XXX XXX  > XXX.sql
+# 创建SCHEMA
+CREATE SCHEMA `XXX` DEFAULT CHARACTER SET utf8mb4 ;
+# 创建用户
+CREATE USER 'XXX'@'%' IDENTIFIED BY 'XXX';
+
 # 上一步的备份sql可以直接在新的数据库执行sql
+# mysql/XXX.sql数据文件
+docker cp mysql mysql:/
+docker exec -it mysql /bin/bash
+> mysql --host 127.0.0.1 --port 3306 --user XXX --password=XXX XXX < /mysql/XXX.sql
 ```
 
 ### 2.mongo迁移
 ```shell
 # 备份文档结构
-mongodump --host 数据库主机host --port 数据库端口 -u 数据库用户名 -p 数据库密码 -d 数据库名称 -o /data/mongodb-bakup
-cd /data/mongodb-bakup
-rm -rf system.*
+# 安装命令工具
+wget https://fastdl.mongodb.org/tools/db/mongodb-database-tools-rhel70-x86_64-100.5.1.tgz
+# 备份
+./mongodump --host 127.0.0.1 --port 27071 -u XXX -p XXX --excludeCollection=XXX --excludeCollection=XXX -d XXX -o /home/app/bakup/mongo
 
 # 登录mongo数据库
 mongo --host 数据库主机host --port 数据库端口 -u 数据库用户名 -p 数据库密码 -d 数据库名称
 
-# 使用root用户创建数据库，创建用户
-mongo > 
+# 使用root用户(先创建，角色root)创建数据库，创建用户
+mongo >
 db.runCommand({
 "createUser":"用户名",
 "pwd":"数据库密码",
@@ -261,7 +275,10 @@ db.runCommand({
 });
 
 # 恢复文档结构
-mongorestore --host 数据库主机host --port 数据库端口 -u 数据库用户名 -p 数据库密码 -d 数据库名称 /data/mongodb-bakup
+# mongo/XXX数据文件
+docker cp mongo mongo:/
+docker exec -it mongo mongorestore --host 127.0.0.1 --port 27017 -u XXX -p XXX -d XXX /mongo/XXX
+docker exec -it mongo rm -rf /mongo
 ```
 
 ## 四. 容器环境搭建
@@ -269,6 +286,17 @@ mongorestore --host 数据库主机host --port 数据库端口 -u 数据库用�
 ```shell
 # 下载并执行安装
 curl -sSL https://get.docker.com/ | sh
+
+# 容器加速
+sudo mkdir -p /etc/docker
+sudo tee /etc/docker/daemon.json <<-'EOF'
+{
+  "registry-mirrors": ["https://5h6t1v1q.mirror.aliyuncs.com"]
+}
+EOF
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+
 # 执行完成后需退出重新登录
 sudo usermod -aG docker app
 
@@ -283,18 +311,18 @@ sudo systemctl daemon-reload
 systemctl restart docker
 sudo service docker restart
 
-# 关闭docker    
+# 关闭docker
 systemctl stop docker
 service docker stop
 
 # 查看版本
-docker –-version
+docker --version
 
 # 设置开机启动
 systemctl enable docker
 ```
 
-## 五. 项目构建及发布(将helper-deploy/下的文件夹复制到~/bin目录下)
+## 五. 项目构建及发布(将***远邦益安阿里云生产环境配置***下的文件夹复制到~/bin目录下)
 ### 1.代码下载(先配置代码库ssh免密访问)(app)
 ```shell
 mkdir -p data/project/code
@@ -336,11 +364,45 @@ server {
 }
 ```
 
-### 6.容器批量清理(app)
+### 7.容器批量清理(app)
 ```shell
 docker rm $(docker stop $(docker ps -aq))
 docker rmi $(docker images -aq)
 rm -rf /data/project/*
+```
+
+### 8.访问https://hub.docker.com/拉取mysql、mongo、rabbitmq、redis镜像
+```shell
+# mysql
+docker pull mysql:5.7.36
+docker run  -h mysql --network host -m 2g --memory-swap 2g -c 2048 --restart=on-failure:3 \
+  -it -d -v /data/project/mysql/data:/var/lib/mysql -v /data/project/mysql/conf:/etc/mysql/conf.d \
+  -e MYSQL_ROOT_PASSWORD=XXX --name mysql mysql:5.7.36
+
+# mongo
+docker pull mongo:4.4
+/var/log/mongodb/mongod.log /var/lib/mongodb
+docker run  -h mongo --network host -m 2g --memory-swap 2g -c 2048 --restart=on-failure:3 \
+  -it -d -v /data/project/mongo/configdb:/data/configdb -v /data/project/mongo/db:/data/db \
+  --name mongo mongo:4.4 --auth
+docker exec -it mongo mongo admin
+db.createUser({ user:'XXX',pwd:'XXX',roles:[ { role:'root', db: 'admin'}]});
+use XXX
+db.createUser({ user:'XXX',pwd:'XXX',roles:[ { role:'readWrite', db: 'XXX'}]});
+
+# rabbit
+docker pull rabbitmq:3.9.8-management
+docker run  -h rabbitmq --network host -m 512m --memory-swap 521m -c 512 --restart=on-failure:3 \
+  -it -d -v /data/project/rabbitmq:/var/lib/rabbitmq \
+  -e RABBITMQ_DEFAULT_USER=XXX -e RABBITMQ_DEFAULT_PASS=XXX \
+  --name rabbitmq rabbitmq:3.9.8-management
+# 新增用户
+
+# redis
+docker pull redis:6.2.6
+docker run  -h redis --network host -m 512m --memory-swap 512m -c 1024 --restart=on-failure:3 \
+  -it -d -v /data/project/redis/data:/data \
+  --name redis redis:6.2.6 --appendonly yes --requirepass XXX
 ```
 
 ## 六. 服务器运维
@@ -362,7 +424,7 @@ sudo vi /etc/crontab
 ### 2.长时间未执行完成的sql kill
 * mysql_long_running_query_monitor
 * mysql 长时间查询事件监控：每过10分钟超过10秒没有执行完成的sql直接kill
-```text
+```sql
 begin
   declare v_sql varchar(500);
   declare no_more_long_running_query integer default 0;
@@ -389,7 +451,7 @@ end
 
 ```
 
-```
+```sql
 drop event `mysql_long_running_query_monitor`;
 
 delimiter |
@@ -422,4 +484,14 @@ CREATE EVENT `mysql_long_running_query_monitor`
   close c_tid;
 end |
 delimiter ;
+```
+
+## 七. 其他配置
+
+### 1.配置websocket 证书
+
+```shell
+# 下载Nginx类型的证书
+openssl pkcs8 -topk8 -nocrypt -in XXX.key -out server.key
+mv XXX.pem server.crt
 ```

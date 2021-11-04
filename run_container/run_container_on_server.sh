@@ -8,7 +8,7 @@ if [ -f "${project_config_path}" ];then
     do
       if [[ $line != "#"* ]];then
         if [[ -n $line ]];then
-          echo $line
+#          echo $line
           eval $line
         fi
       fi
@@ -44,10 +44,6 @@ log_path="/data/project/log/run_container.log"
 
 echo "开始在${server_name}首次运行容器${docker_image_tag}" >> ${log_path}
 
-#登录容器仓库
-echo "登录容器仓库,请输入密码:"
-ssh -t app@${server_name} docker login --username=${docker_registry_user_name} ${docker_registry}
-
 server_no=${server_name:0-1:1}
 # 根据服务序号设置应用容器名称
 container_name=${app_name}${server_no}
@@ -76,8 +72,13 @@ fi
 ../deploy_project/build_project.sh ${server_name} ${app_name} "start_no"
 
 
+echo "docker run -h app --network host -m ${app_run_configs[i]} --memory-swap ${app_run_configs[i]} -c ${app_run_priorities[i]} --restart=on-failure:3 -it -d -v ${jar_deploy_dir}/${jar_name}:${jar_deploy_dir}/${jar_name} -v ${project_root_dir}/${app_name}:${project_root_dir}/${app_name} -v ${project_root_dir}/${app_name}/log:${project_root_dir}/${app_name}/log --name ${container_name} ${docker_registry}:${docker_image_tag}" >> ${log_path}
+
 #运行项目(本机)
-if [ x"$server_no" = x"1" ]; then
+if [ x"$server_no" == x"1" ]; then
+  #登录容器仓库
+  echo "登录容器仓库,请输入密码:"
+  docker login --username=${docker_registry_user_name} ${docker_registry}
   if [ ! -d "${jar_deploy_dir}" ];then
       mkdir -pv ${jar_deploy_dir}
   fi
@@ -85,11 +86,14 @@ if [ x"$server_no" = x"1" ]; then
        mkdir -pv ${project_root_dir}/${app_name}/log
   fi
   \cp -rf ${jar_build_dir}/${jar_name} ${jar_deploy_dir}
-  docker run  -h app --network host -m ${app_run_configs[i]} --memory-swap ${app_run_configs[i]} -c ${app_run_priorities[i]} --restart=on-failure:3  \
+  docker run -h app --network host -m ${app_run_configs[i]} --memory-swap ${app_run_configs[i]} -c ${app_run_priorities[i]} --restart=on-failure:3  \
   -it -d -v ${jar_deploy_dir}/${jar_name}:${jar_deploy_dir}/${jar_name} -v ${project_root_dir}/${app_name}:${project_root_dir}/${app_name} \
   -v ${project_root_dir}/${app_name}/log:${project_root_dir}/${app_name}/log \
   --name ${container_name} ${docker_registry}:${docker_image_tag}
 else
+  #登录容器仓库
+  echo "登录容器仓库,请输入密码:"
+  ssh -t app@${server_name} docker login --username=${docker_registry_user_name} ${docker_registry}
   ssh app@${server_name} mkdir -pv ${jar_deploy_dir}/
   ssh app@${server_name} mkdir -pv ${project_root_dir}/${app_name}/log
   scp ${jar_build_dir}/${jar_name} app@${server_name}:${jar_deploy_dir}
@@ -98,5 +102,3 @@ else
   -v /${project_root_dir}/${app_name}/log:/${project_root_dir}/${app_name}/log \
   --name ${container_name} ${docker_registry}:${docker_image_tag}
 fi
-echo "docker run  -h app --network host -m ${app_run_configs[i]} --memory-swap ${app_run_configs[i]} -c ${app_run_priorities[i]} --restart=on-failure:3 -it -d -v ${jar_deploy_dir}/${jar_name}:${jar_deploy_dir}/${jar_name} -v ${project_root_dir}/${app_name}:${project_root_dir}/${app_name} -v ${project_root_dir}/${app_name}/log:${project_root_dir}/${app_name}/log --name ${container_name} ${docker_registry}:${docker_image_tag}" >> ${log_path}
-

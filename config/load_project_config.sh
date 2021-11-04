@@ -13,8 +13,8 @@ if [ -f "${project_config_path}" ];then
         done <  "${project_config_path}"
 fi
 
-echo "第一台服务器名称:${server_names[1]}"
-echo "第一台服务器权重:${server_weights[1]}"
-echo "第一个应用名称  :${app_names[1]}"
-echo "第一个应用jar   :${jar_names[1]}"
-echo "第一个应用端口  :${app_expose_ports[1]}"
+echo "第一台服务器名称:${server_names[0]}"
+echo "第一台服务器权重:${server_weights[0]}"
+echo "第一个应用名称  :${app_names[0]}"
+echo "第一个应用jar   :${jar_names[0]}"
+echo "第一个应用端口  :${app_expose_ports[0]}"

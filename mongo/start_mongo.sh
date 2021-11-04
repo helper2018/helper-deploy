@@ -1,7 +1,7 @@
 #!/bin/bash
-/data/tools/mongodb/bin/mongod --config /data/tools/mongodb/conf/mongod.conf --replSet picker_rs
-/data/tools/mongodb/bin/mongod --config /data/tools/mongodb-rs1/conf/mongod.conf --replSet picker_rs
-/data/tools/mongodb/bin/mongod --config /data/tools/mongodb-rs2/conf/mongod.conf --replSet picker_rs
+/data/tools/mongodb/bin/mongod --config /data/tools/mongodb/conf/mongod.conf --replSet rs
+/data/tools/mongodb/bin/mongod --config /data/tools/mongodb-rs1/conf/mongod.conf --replSet rs
+/data/tools/mongodb/bin/mongod --config /data/tools/mongodb-rs2/conf/mongod.conf --replSet rs
 
 #MongoDB基本的角色
 
@@ -14,7 +14,7 @@
 
 ##1.配置复制集
 #config = {
-#_id: 'picker_rs', members: [
+#_id: 'rs', members: [
 #{_id: 0, host: 'XXX:XXX',priority:1},
 #{_id: 1, host: 'XXX:XXX'}]
 #}

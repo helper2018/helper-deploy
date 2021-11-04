@@ -37,7 +37,7 @@ for (( i = 0; i < ${#app_names[@]}; i++ )); do
     echo "${app_names[i]}-${image_tag_suffixs[j]}容器创建命令" >> ${log_path}
     echo "docker build --tag \"${docker_registry}:${app_names[i]}-${image_tag_suffixs[j]}\" --build-arg userName=${image_user_name} --build-arg userGroup=${image_user_group} --build-arg appName=${app_names[i]} --build-arg exposePort=\"${app_expose_ports[i]}\" --build-arg jarName=${jar_names[i]} --build-arg runEnvProfile=${run_env_profiles[j]} --build-arg version=${label_version} --build-arg appCheckUrl=${app_check_urls[i]} --build-arg javaOptions=\"${java_options}\" -f common_dockerfile ." >> ${log_path}
     # 将构建成功的容器推送到阿里云仓库（先登录）
-    docker push ${docker_registry}:${app_names[i]}-${image_tag_suffix}
+    docker push ${docker_registry}:${app_names[i]}-${image_tag_suffixs[j]}
   done
 done
 echo "完成构建镜像" >> ${log_path}
